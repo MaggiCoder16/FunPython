@@ -28,11 +28,9 @@ jobs:
           git remote add botli https://github.com/Torom/BotLi.git || echo "botli sala remote already exists"
           git fetch botli main
 
-      - name: Sync Python files with patch (excluding chatter.py)
+      - name: Sync Python files
         run: |
-          exclude_files="chatter.py"
-          py_files=$(git ls-tree -r --name-only botli/main | grep '\.py$' | grep -Ev "$exclude_files")
-
+          py_files=$(git ls-tree -r --name-only botli/main | grep '\.py$' | grep -v 'chatter.py')
           for f in $py_files; do
             echo "Syncing $f with patch..."
             git diff botli/main -- "$f" > update.patch
@@ -45,8 +43,19 @@ jobs:
             rm -f update.patch
           done
 
+          if [ -f chatter.py ]; then
+            echo "Merging BotLi updates into chatter.py..."
+            cp chatter.py chatter_custom.py
+            git checkout botli/main -- chatter.py
+            awk '/^# CUSTOM FUNCTION START$/,/^# CUSTOM FUNCTION END$/' chatter_custom.py >> chatter.py
+            rm -f chatter_custom.py
+          else
+            echo "chatter.py does not exist locally, fetching from BotLi"
+            git checkout botli/main -- chatter.py
+          fi
+
           git add .
-          git commit -m "Sync BotLi Python files (patch applied, chatter.py excluded)" || echo "No changes to commit gadhe"
+          git commit -m "Sync BotLi Python files (merged chatter.py custom functions)" || echo "No changes to commit gadhe"
 
       - name: Push changes
         run: git push origin main
