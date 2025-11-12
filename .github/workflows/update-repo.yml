@@ -1,0 +1,51 @@
+name: Sync Maggi Files
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 */2 * * *"  # every 2 hours
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout our repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.PAT_TOKEN }}
+
+      - name: Configure Git identity
+        run: |
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "github-actions[bot]"
+
+      - name: Add Maggi remote
+        run: |
+          git remote add maggi https://github.com/MaggiCoder16/Tasty-Maggi.git || echo "Maggi already added"
+          git fetch maggi main
+
+      - name: Sync .py, .txt, and root config.yml
+        run: |
+          # Collect all .py and .txt files
+          files=$(git ls-tree -r --name-only maggi/main | grep -E '\.(py|txt)$')
+          
+          # Include config.yml only if it exists in root
+          if git ls-tree -r --name-only maggi/main | grep -q '^config\.yml$'; then
+            files="$files config.yml"
+          fi
+
+          # Sync each file
+          for f in $files; do
+            echo "Syncing $f from Maggi..."
+            git checkout maggi/main -- "$f"
+          done
+
+          git add .
+          git commit -m "Sync Maggi .py, .txt, and root config.yml files" || echo "No changes to commit"
+
+      - name: Push changes
+        run: git push origin main
