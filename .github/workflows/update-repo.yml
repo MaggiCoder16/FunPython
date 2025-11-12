@@ -25,27 +25,15 @@ jobs:
 
       - name: Add Maggi remote
         run: |
-          git remote add maggi https://github.com/MaggiCoder16/Tasty-Maggi.git || echo "Maggi already added"
+          git remote add maggi https://github.com/MaggiCoder16/Tasty-Maggi.git || echo "Maggi remote already exists"
           git fetch maggi main
 
-      - name: Sync .py, .txt, and root config.yml
+      - name: Sync entire Maggi repository
         run: |
-          # Collect all .py and .txt files
-          files=$(git ls-tree -r --name-only maggi/main | grep -E '\.(py|txt)$')
-          
-          # Include config.yml only if it exists in root
-          if git ls-tree -r --name-only maggi/main | grep -q '^config\.yml$'; then
-            files="$files config.yml"
-          fi
-
-          # Sync each file
-          for f in $files; do
-            echo "Syncing $f from Maggi..."
-            git checkout maggi/main -- "$f"
-          done
-
-          git add .
-          git commit -m "Sync Maggi .py, .txt, and root config.yml files" || echo "No changes to commit"
+          echo "Replacing all files with Maggi repo content..."
+          git checkout maggi/main -- .
+          git add -A
+          git commit -m "Sync all files from Maggi repository" || echo "No changes to commit"
 
       - name: Push changes
         run: git push origin main
